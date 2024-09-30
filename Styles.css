@@ -62,6 +62,78 @@ nav a:hover {
     background-color: #dceeff; /* Slightly darker pastel blue on hover */
 }
 
+#recipe-nav li.selected {
+    background-color: #dceeff;
+}
+
+.recipe-box {
+    border: 1px solid #ddd; /* Light border for the box */
+    border-radius: 10px; /* Rounded corners */
+    padding: 15px; /* Padding inside the box */
+    margin: 20px; /* Margin outside the box */
+    background-color: #fff; /* White background */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    transition: transform 0.3s; /* Smooth hover effect */
+}
+
+.recipe-box:hover {
+    transform: scale(1.02); /* Slightly enlarge on hover */
+}
+
+.recipe-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    
+}
+
+.recipe-photo {
+    width: 100%; /* Set a fixed width */
+    height: auto; /* Set a fixed height */
+    overflow: hidden; /* Hide overflow */
+    border-radius: 10%; /* Circular shape */
+    display: flex; /* Center the image */
+    align-items: center; /* Vertically center */
+    justify-content: center; /* Horizontally center */
+}
+
+.recipe-photo img {
+    width: 100%; /* Fill the container */
+    height: auto; /* Fill the container */
+    object-fit: cover; /* Crop the image to fit */
+    border: 2px solid #ddd; /* Light border for the box */
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.recipe-name {
+    font-size: 1.5em; /* Larger font size for the name */
+    margin: 10px 0; /* Margin above and below the name */
+    color: #333; /* Dark text color */
+}
+
+.recipe-ingredients,
+.recipe-method,
+.recipe-tags {
+    margin: 10px 0; /* Margin above and below sections */
+}
+
+.recipe-tags {
+    display: flex; /* Flex display for tags */
+    flex-wrap: wrap; /* Allow tags to wrap */
+}
+
+.recipe-tags strong {
+    margin-right: 5px;
+}
+
+.tag {
+    background-color: #f0f8ff; /* Pastel blue background for tags */
+    border-radius: 5px; /* Rounded corners for tags */
+    padding: 5px 10px; /* Padding inside the tag */
+    margin-right: 5px; /* Margin between tags */
+    font-size: 0.9em; /* Font size for tags */
+}
+
 /* Content area styles */
 .content {
     flex: 1; /* Take the remaining space */

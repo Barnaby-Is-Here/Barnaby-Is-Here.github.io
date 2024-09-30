@@ -1,3 +1,78 @@
+// Handle google api.
+
+// Function to fetch new recipes from the API
+async function fetchNewRecipes() {
+    try {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbwaMrcK-9LiMs6AVmmHKVcV7vBfAP4b380wSQobMg7YGNYDGMlQ0c6197jzURGQAt4L6w/exec?route=recipes');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const recipes = await response.json();
+        console.log('Fetched new recipes:', recipes);
+        return recipes;
+    } catch (error) {
+        console.error('Error fetching new recipes:', error);
+        return null; // Return null if there was an error
+    }
+}
+
+// Function to fetch new images from the API
+async function fetchNewImages() {
+    try {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbwaMrcK-9LiMs6AVmmHKVcV7vBfAP4b380wSQobMg7YGNYDGMlQ0c6197jzURGQAt4L6w/exec?route=images');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const images = await response.json();
+        console.log('Fetched new images:', images);
+
+        return images;
+    } catch (error) {
+        console.error('Error fetching new images:', error);
+        return null; // Return null if there was an error
+    }
+}
+
+async function fetchDataInParallel() {
+    try {
+        // Start both fetch requests without awaiting
+        const recipesPromise = fetchNewRecipes();
+        const imagesPromise = fetchNewImages();
+
+        // Wait for both promises to resolve
+        const [recipesResponse, imagesResponse] = await Promise.all([recipesPromise, imagesPromise]);
+
+        // Combine
+        const combined = combineRecipesWithImages(recipesResponse, imagesResponse)
+        console.log('Fetched Data:', combined);
+        return combined;
+
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        return null;
+    }
+}
+
+// Function to combine recipes and images
+function combineRecipesWithImages(recipes, images) {
+    // Loop through the recipes and add the "Picture" property if an image is found
+    const combinedData = recipes.map(recipe => {
+        // Find the matching image (strip the file extension from image name)
+        const imageMatch = images.find(image => {
+            const imageName = image.name.replace(/\.[^/.]+$/, ""); // Remove file extension
+            return imageName === recipe.Name;
+        });
+
+        // Add the "Picture" property with the URL if a match is found
+        return {
+            ...recipe,
+            Picture: imageMatch ? imageMatch.url : null // Set to null if no match is found
+        };
+    });
+
+    return combinedData;
+}
+
 // Function to group recipes by their Path
 function groupRecipes(recipes) {
     return recipes.reduce((acc, recipe) => {
@@ -24,7 +99,7 @@ async function pageLoad() {
     }
 
     // Step 3: Attempt to get new data
-    const newRecipes = await fetchNewData();
+    const newRecipes = await fetchDataInParallel();
     if (newRecipes) {
         // Step 4: Group the data
         const newGroupedRecipes = groupRecipes(newRecipes);
@@ -55,33 +130,32 @@ function getCachedGroups() {
     return null;
 }
 
-// Function to fetch new data from the API
-async function fetchNewData() {
-    try {
-        const response = await fetch("https://script.google.com/macros/s/AKfycbwaMrcK-9LiMs6AVmmHKVcV7vBfAP4b380wSQobMg7YGNYDGMlQ0c6197jzURGQAt4L6w/exec");
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        const recipes = await response.json();
-        console.log('Fetched new recipes:', recipes);
-        return recipes;
-    } catch (error) {
-        console.error('Error fetching new recipes:', error);
-        return null; // Return null if there was an error
-    }
-}
-
-// Function to update UI
-function updateUI(groupedRecipes) {
-    console.log('Updating UI with:', groupedRecipes);
-    // Your logic to update the UI with the grouped recipes goes here
-    createNavBar(groupedRecipes); // Example of updating the navbar
-}
-
 // Function to save grouped recipes to cache
 function saveGroupsToCache(groupedRecipes) {
     localStorage.setItem('groupedRecipes', JSON.stringify(groupedRecipes));
     console.log('Saved grouped recipes to cache:', groupedRecipes);
+}
+
+// Function to update UI
+function updateUI(groupedRecipes, selectedGroup) {
+
+    createNavBar(groupedRecipes);
+
+    // If not given, retrieve the last selected group from local storage
+    if (!selectedGroup) {
+        selectedGroup = localStorage.getItem('selectedGroup');
+    }
+
+    // If still no group, pick the first available.
+    if (!selectedGroup) {
+        selectedGroup = Object.keys(groupedRecipes)[0];
+    }
+
+    // If group is still empty, don't try to fill in.
+    if (selectedGroup) {
+        displayRecipes(selectedGroup, groupedRecipes);
+        refreshRecipeNavHighlight(selectedGroup, groupRecipes);
+    }
 }
 
 // Function to create a navigation bar based on grouped recipes
@@ -94,8 +168,53 @@ function createNavBar(groupedRecipes) {
     for (const path in groupedRecipes) {
         const li = document.createElement('li');
         li.textContent = path; // You can also link to different sections
+        li.addEventListener('click', function() { handleGroupClick(this.textContent, groupedRecipes); })
         navList.appendChild(li);
     }
+}
+
+// Display the selected recipes in the recipe-container
+function displayRecipes(groupName, groupedRecipes) {
+    const recipeContainer = document.getElementById('recipe-container');
+    recipeContainer.innerHTML = ''; // Clear any previous recipes
+
+    const groupRecipes = groupedRecipes[groupName]; // Assuming `groupedRecipes` holds the grouped data
+
+    groupRecipes.forEach(recipe => {
+        const recipeBox = document.createElement('recipe-box');
+        recipeBox.setRecipeData(recipe); // Set the recipe data immediately
+        recipeContainer.appendChild(recipeBox);
+    });
+}
+
+// Update nav bar to make the selected one stay lit
+function refreshRecipeNavHighlight(groupName, groupedRecipes) {
+    const navList = document.getElementById('recipe-nav'); // Ensure you have a <ul> with this ID in your HTML
+    const children = navList.children;
+    
+    // Make sure there are any children
+    if (!children || children.length === 0) { 
+        return; 
+    }
+
+    // Loop through each <li> element in the nav list
+    for (const li of children) {
+        if (li.textContent === groupName) {
+            li.classList.add('selected');
+        } else {
+            li.classList.remove('selected');
+        }
+    }
+}
+
+// Handle interaction
+function handleGroupClick(groupName, groupedRecipes) {
+    // Save the selected group to local storage
+    localStorage.setItem('selectedGroup', groupName);
+
+    // Display the recipes for the selected group
+    displayRecipes(groupName, groupedRecipes);
+    refreshRecipeNavHighlight(groupName, groupedRecipes);
 }
 
 
