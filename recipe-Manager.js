@@ -91,26 +91,28 @@ function groupRecipes(recipes) {
 
 // Main function to handle page load
 async function pageLoad() {
-    // Step 1: Read Cache (groups)
+
+    // Step 2: Read Cache (groups)
     const cachedGroups = getCachedGroups();
     if (cachedGroups) {
-        // Step 2: If valid, update UI
+        // Step 3: If valid, update UI
         updateUI(cachedGroups);
     }
 
-    // Step 3: Attempt to get new data
+    // Step 4: Attempt to get new data
     const newRecipes = await fetchDataInParallel();
     if (newRecipes) {
-        // Step 4: Group the data
+        // Step 5: Group the data
         const newGroupedRecipes = groupRecipes(newRecipes);
 
-        // Step 5: Compare the new data to old
+        // Step 6: Compare the new data to old
         if (JSON.stringify(newGroupedRecipes) !== JSON.stringify(cachedGroups)) {
-            // Step 6: If different, update UI and save to cache
+            // Step 7: If different, update UI and save to cache
             updateUI(newGroupedRecipes);
             saveGroupsToCache(newGroupedRecipes);
         }
     }
+
 }
 
 // Function to get cached groups

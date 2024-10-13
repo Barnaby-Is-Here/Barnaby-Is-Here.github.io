@@ -4,8 +4,22 @@ class NavComponent extends HTMLElement {
       .then(response => response.text())
       .then(data => {
         this.innerHTML = data;
+        this.staticUI();
+
     });
   }
+
+  // Update static UI elements
+  staticUI() {
+    // Resize UI
+    const header = document.querySelector('header');
+    const headerHeight = (header !== null) ? header.offsetHeight + 'px' : "30px";
+    document.documentElement.style.setProperty('--header-nav-height', headerHeight);
+
+    const recipeNav = document.getElementById('recipe-nav');
+    const recipeWidth = (recipeNav !== null) ?  recipeNav.offsetWidth + 'px' : "30px";
+    document.documentElement.style.setProperty('--recipe-nav-width', recipeWidth);
+    }
 }
 customElements.define('custom-nav', NavComponent);
 
@@ -35,39 +49,47 @@ class RecipeBoxComponent extends HTMLElement {
 
   fillInRecipeBox(recipe) {
 
-      // Update the recipe name
-      const nameElement = this.querySelector('#recipe-name');
-      nameElement.textContent = recipe.Name;
+    // Update the recipe name
+    const nameElement = this.querySelector('#recipe-name');
+    nameElement.textContent = recipe.Name;
 
-      // Update the ingredients list
-      const ingredientList = this.querySelector('#ingredient-list');
-      ingredientList.innerHTML = '';
-      recipe.Ingredients.split(',').forEach(ingredient => {
-          const li = document.createElement('li');
-          li.textContent = ingredient.trim();
-          ingredientList.appendChild(li);
-      });
+    // Update the ingredients list
+    const ingredientList = this.querySelector('#ingredient-list');
+    ingredientList.innerHTML = '';
+    recipe.Ingredients.split(',').forEach(ingredient => {
+        const li = document.createElement('li');
+        li.textContent = ingredient.trim();
+        ingredientList.appendChild(li);
+    });
 
-      // Update the method text
-      const methodElement = this.querySelector('#method');
-      methodElement.textContent = recipe.Method;
+    const items = ingredientList.querySelectorAll('li');
 
-      // Update the tags area
-      const tagArea = this.querySelector('#tag-area');
-      tagArea.innerHTML = '';
-      recipe.Tags.split(',').forEach(tag => {
-          const span = document.createElement('span');
-          span.className = 'tag';
-          span.textContent = tag.trim();
-          tagArea.appendChild(span);
-      });
+    // Set max items per column and calculate the number of columns needed
+    const maxItemsPerColumn = 10;  // Adjust this based on your desired height
+    const columns = Math.ceil(items.length / maxItemsPerColumn);
 
-      // Update the recipe photo
-      const photoElement = this.querySelector('#recipe-photo');
-      const cleanImageUrl = recipe.Picture.split('&export=download')[0]; // Remove export parameter
-      const directImageUrl = `https://drive.google.com/thumbnail?id=${cleanImageUrl.split('=')[1]}`; // Format for thumbnail
-      photoElement.src = directImageUrl;
-      photoElement.alt = recipe.Name;
+    // Dynamically adjust the CSS grid column count
+    ingredientList.style.gridTemplateColumns = `repeat(${columns}, minmax(150px, 1fr))`;
+
+    // Update the method text
+    const methodElement = this.querySelector('#method');
+    methodElement.textContent = recipe.Method;
+
+    // Update the tags area
+    const tagArea = this.querySelector('#tag-area');
+    tagArea.innerHTML = '<strong>Tags:</strong>';
+    recipe.Tags.split(',').forEach(tag => {
+        const span = document.createElement('span');
+        span.textContent = tag.trim();
+        tagArea.appendChild(span);
+    });
+
+    // Update the recipe photo
+    const photoElement = this.querySelector('#recipe-photo');
+    const cleanImageUrl = recipe.Picture.split('&export=download')[0]; // Remove export parameter
+    const directImageUrl = `https://lh3.googleusercontent.com/d/${cleanImageUrl.split('=')[1]}`; // Format for thumbnail
+    photoElement.src = directImageUrl;
+    photoElement.alt = recipe.Name;
   }
 }
 customElements.define('recipe-box', RecipeBoxComponent);
