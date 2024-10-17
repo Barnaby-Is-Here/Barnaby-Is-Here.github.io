@@ -154,6 +154,10 @@ nav a:hover {
     font-size: 0.9em;
 }
 
+#tag-area > strong {
+    padding-top: 5px;
+}
+
 /* Media query for smaller screens - image goes above ingredients */
 @media (max-width: 768px) {
     .recipe-header {
