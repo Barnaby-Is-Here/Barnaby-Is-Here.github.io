@@ -4,7 +4,7 @@ class RecipeManager {
     #recipes = []; // Store all recipe data
     #recipePhotoLinks = [];
     #combinedRecipes = [];
-    groupedRecipes = [];
+    #groupedRecipes = [];
     #newGroupedRecipes = [];
 
     constructor() {
@@ -17,6 +17,19 @@ class RecipeManager {
       return RecipeManager.instance;
     }
 
+    // Function to find recipe
+    getRecipe(path, recipeName) {
+        const recipesInPath = this.#groupedRecipes[path]; // Get the array for the specified path (e.g., "Japanese")
+
+        if (recipesInPath) {
+            // Find the recipe by name
+            const recipe = recipesInPath.find(r => r.Name === recipeName);
+            return recipe || null; // Return the recipe or null if not found
+        }
+        
+        return null; // Return null if path doesn't exist
+    }
+
     get groupNames()
     {
         return 
@@ -24,8 +37,13 @@ class RecipeManager {
 
     set groupedRecipes(newGroupedRecipes)
     {
-        this.groupedRecipes = newGroupedRecipes;
+        this.#groupedRecipes = newGroupedRecipes;
         this.notifySubscribers();
+    }
+
+    get groupedRecipes()
+    {
+        return this.#groupedRecipes;
     }
 
     subscribeToUpdates(callback)

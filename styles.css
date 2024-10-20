@@ -141,6 +141,12 @@ nav a:hover {
     flex: 1 1 120px;
 }
 
+.recipe-footer {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
 .recipe-tags {
     display: flex;
     flex-wrap: wrap;
@@ -156,6 +162,32 @@ nav a:hover {
 
 #tag-area > strong {
     padding-top: 5px;
+}
+
+#recipe-change {
+    width: 40px;
+    height: 40px;
+    border-radius: 40%;
+    display: flex; /* Use flexbox */
+    justify-content: center; /* Horizontally center the image */
+    align-items: center; /* Vertically center the image */
+}
+
+#recipe-change:hover {
+    background-color: grey;
+}
+
+#edit-recipe-img {
+    width: 70%;
+    height: 70%;
+}
+
+#recipe-change-link {
+    display: flex; /* Flexbox for centering the image inside the link */
+    justify-content: center; /* Horizontally center */
+    align-items: center; /* Vertically center */
+    width: 100%;
+    height: 100%;
 }
 
 /* Media query for smaller screens - image goes above ingredients */

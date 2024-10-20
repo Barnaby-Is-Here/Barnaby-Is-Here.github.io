@@ -84,6 +84,10 @@ class RecipeBoxComponent extends HTMLElement {
         tagArea.appendChild(span);
     });
 
+    // Set config link
+    const editBtn = this.querySelector('#recipe-change-link');
+    editBtn.href = "add-recipe.html?path=" + recipe.Path +"&name=" + recipe.Name;
+
     // Update the recipe photo
     const photoElement = this.querySelector('#recipe-photo');
     const cleanImageUrl = recipe.Picture.split('&export=download')[0]; // Remove export parameter
