@@ -32,7 +32,7 @@ class RecipeManager {
 
     get groupNames()
     {
-        return 
+        return Object.keys(this.#groupedRecipes);
     }
 
     set groupedRecipes(newGroupedRecipes)

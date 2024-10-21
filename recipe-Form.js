@@ -3,6 +3,17 @@ import recipeManager from './recipe-Manager.js';
 
 // Main function to handle page load
 async function pageLoad() {
+
+  // Set options
+  const paths = recipeManager.groupNames;
+  const selectElement = document.getElementById('recipe-path');
+  paths.forEach(path => {
+    const option = document.createElement('option');
+    option.value = path;
+    option.textContent = path;
+    selectElement.appendChild(option);
+  });
+
   // Check for Query Strings 
   const urlParams = new URLSearchParams(window.location.search);
 
