@@ -1,188 +1,164 @@
-class RecipeManager {
+import { supabase } from './src/supabaseClient.js';
 
+class RecipeManager {
     #subscribers = [];
-    #recipes = []; // Store all recipe data
-    #recipePhotoLinks = [];
-    #combinedRecipes = [];
     #groupedRecipes = [];
-    #newGroupedRecipes = [];
 
     constructor() {
-      if (!RecipeManager.instance) {
-        console.log("New Recipe Manager.");
-        RecipeManager.instance = this;
-
-        this.init();
-      }
-      return RecipeManager.instance;
-    }
-
-    // Function to find recipe
-    getRecipe(path, recipeName) {
-        const recipesInPath = this.#groupedRecipes[path]; // Get the array for the specified path (e.g., "Japanese")
-
-        if (recipesInPath) {
-            // Find the recipe by name
-            const recipe = recipesInPath.find(r => r.Name === recipeName);
-            return recipe || null; // Return the recipe or null if not found
+        if (!RecipeManager.instance) {
+            console.log("New Recipe Manager.");
+            RecipeManager.instance = this;
+            this.init();
         }
-        
-        return null; // Return null if path doesn't exist
+        return RecipeManager.instance;
     }
 
-    get groupNames()
-    {
+    async getRecipe(path, recipeName) {
+        try {
+            const { data, error } = await supabase
+                .from('recipes')
+                .select('*')
+                .eq('path', path)
+                .eq('name', recipeName)
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error fetching recipe:', error);
+            return null;
+        }
+    }
+
+    get groupNames() {
         return Object.keys(this.#groupedRecipes);
     }
 
-    set groupedRecipes(newGroupedRecipes)
-    {
+    set groupedRecipes(newGroupedRecipes) {
         this.#groupedRecipes = newGroupedRecipes;
         this.notifySubscribers();
     }
 
-    get groupedRecipes()
-    {
+    get groupedRecipes() {
         return this.#groupedRecipes;
     }
 
-    subscribeToUpdates(callback)
-    {
+    subscribeToUpdates(callback) {
         this.#subscribers.push(callback);
     }
 
-    notifySubscribers()
-    {
-        this.#subscribers.forEach(callback => callback(this.groupedRecipes))
+    notifySubscribers() {
+        this.#subscribers.forEach(callback => callback(this.groupedRecipes));
     }
 
     async init() {
-        this.groupedRecipes = this.getCachedGroups();
-        await this.fetchDataInParallel();
-        if (this.#combinedRecipes) {
-            this.#newGroupedRecipes = this.groupRecipes(this.#combinedRecipes);
-    
-            // Step 6: Compare the new data to old
-            if (JSON.stringify(this.#newGroupedRecipes) !== JSON.stringify(this.groupedRecipes)) {
-                this.groupedRecipes = this.#newGroupedRecipes;
-                this.saveGroupsToCache();
-            }
-        }
+        await this.fetchRecipes();
     }
 
-    // Handle google api.
-    // Function to fetch new recipes from the API
-    async fetchNewRecipes() {
+    async fetchRecipes() {
         try {
-            const response = await fetch('https://script.google.com/macros/s/AKfycbwaMrcK-9LiMs6AVmmHKVcV7vBfAP4b380wSQobMg7YGNYDGMlQ0c6197jzURGQAt4L6w/exec?route=recipes');
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const recipes = await response.json();
-            console.log('Fetched new recipes:', recipes);
-            return recipes;
+            const { data, error } = await supabase
+                .from('recipes')
+                .select('*');
+
+            if (error) throw error;
+
+            // Group the recipes by path
+            const grouped = data.reduce((acc, recipe) => {
+                const path = recipe.path;
+                if (!acc[path]) {
+                    acc[path] = [];
+                }
+                acc[path].push(recipe);
+                return acc;
+            }, {});
+
+            this.groupedRecipes = grouped;
         } catch (error) {
-            console.error('Error fetching new recipes:', error);
-            return null; // Return null if there was an error
+            console.error('Error fetching recipes:', error);
         }
     }
 
-    // Function to fetch new images from the API
-    async fetchNewImages() {
+    async addRecipe(recipe) {
         try {
-            const response = await fetch('https://script.google.com/macros/s/AKfycbwaMrcK-9LiMs6AVmmHKVcV7vBfAP4b380wSQobMg7YGNYDGMlQ0c6197jzURGQAt4L6w/exec?route=images');
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const images = await response.json();
-            console.log('Fetched new images:', images);
+            // Handle image upload first if there's a photo
+            let photoUrl = null;
+            if (recipe.photo) {
+                const { data, error } = await supabase.storage
+                    .from('recipe-photos')
+                    .upload(`${Date.now()}-${recipe.photo.name}`, recipe.photo);
 
-            return images;
+                if (error) throw error;
+                photoUrl = data.path;
+            }
+
+            // Insert recipe data
+            const { data, error } = await supabase
+                .from('recipes')
+                .insert([{
+                    name: recipe.name,
+                    path: recipe.path,
+                    ingredients: recipe.ingredients,
+                    method: recipe.method,
+                    tags: recipe.tags,
+                    photo_url: photoUrl
+                }]);
+
+            if (error) throw error;
+
+            // Refresh recipes
+            await this.fetchRecipes();
+            return data;
         } catch (error) {
-            console.error('Error fetching new images:', error);
-            return null; // Return null if there was an error
+            console.error('Error adding recipe:', error);
+            throw error;
         }
     }
 
-    async fetchDataInParallel() {
+    async updateRecipe(recipe) {
         try {
-            // Start both fetch requests without awaiting
-            const recipesPromise = this.fetchNewRecipes();
-            const imagesPromise = this.fetchNewImages();
+            const { data, error } = await supabase
+                .from('recipes')
+                .update({
+                    name: recipe.name,
+                    path: recipe.path,
+                    ingredients: recipe.ingredients,
+                    method: recipe.method,
+                    tags: recipe.tags
+                })
+                .eq('name', recipe.name)
+                .eq('path', recipe.path);
 
-            // Wait for both promises to resolve
-            [this.#recipes, this.#recipePhotoLinks] = await Promise.all([recipesPromise, imagesPromise]);
+            if (error) throw error;
 
-            // Combine
-            this.#combinedRecipes = this.combineRecipesWithImages(this.#recipes, this.#recipePhotoLinks)
-            console.log('Fetched Data:', this.#combinedRecipes);
-
+            // Refresh recipes
+            await this.fetchRecipes();
+            return data;
         } catch (error) {
-            console.error('Error fetching data:', error);
+            console.error('Error updating recipe:', error);
+            throw error;
         }
     }
 
-    // Function to combine recipes and images
-    combineRecipesWithImages(recipes, images) {
-        // Loop through the recipes and add the "Picture" property if an image is found
-        const combinedData = recipes.map(recipe => {
-            // Find the matching image (strip the file extension from image name)
-            const imageMatch = images.find(image => {
-                const imageName = image.name.replace(/\.[^/.]+$/, ""); // Remove file extension
-                return imageName === recipe.Name;
-            });
+    async deleteRecipe(path, name) {
+        try {
+            const { error } = await supabase
+                .from('recipes')
+                .delete()
+                .eq('path', path)
+                .eq('name', name);
 
-            // Add the "Picture" property with the URL if a match is found
-            return {
-                ...recipe,
-                Picture: imageMatch ? imageMatch.url : null // Set to null if no match is found
-            };
-        });
+            if (error) throw error;
 
-        return combinedData;
-    }
-
-    // Function to group recipes by their Path
-    groupRecipes(recipes) {
-        return recipes.reduce((acc, recipe) => {
-            const path = recipe.Path;
-
-            // If the path doesn't exist in the accumulator, create an empty array
-            if (!acc[path]) {
-                acc[path] = [];
-            }
-
-            // Push the current recipe into the corresponding path group
-            acc[path].push(recipe);
-            return acc;
-        }, {});
-    }
-
-    // Function to get cached groups
-    getCachedGroups() {
-        const cachedData = localStorage.getItem('groupedRecipes');
-        if (cachedData) {
-            const groups = JSON.parse(cachedData);
-            console.log('Cached data type:', typeof groups)
-            // Ensure it's a valid array
-            if (typeof groups === 'object' && groups !== null) {
-                console.log('Using cached groups:', groups);
-                return groups;
-            } else {
-                console.warn('Cached groups data is not valid:', groups);
-            }
+            // Refresh recipes
+            await this.fetchRecipes();
+        } catch (error) {
+            console.error('Error deleting recipe:', error);
+            throw error;
         }
-        return null;
-    }
-
-    // Function to save grouped recipes to cache
-    saveGroupsToCache() {
-        localStorage.setItem('groupedRecipes', JSON.stringify(this.groupedRecipes));
-        console.log('Saved grouped recipes to cache:', this.groupedRecipes);
     }
 }
 
-// Class end
 const recipeManager = new RecipeManager();
 Object.freeze(recipeManager);
 export default recipeManager;
