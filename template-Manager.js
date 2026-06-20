@@ -131,11 +131,17 @@ class RecipeBoxComponent extends HTMLElement {
     if (photoElement) {
       const pictureUrl = recipe.Picture;
 
-      if (typeof pictureUrl === 'string' && pictureUrl.includes('=')) {
-        const cleanImageUrl = pictureUrl.split('&export=download')[0]; // Remove export parameter
-        const imageId = cleanImageUrl.split('=')[1];
-        if (imageId) {
-          photoElement.src = `https://lh3.googleusercontent.com/d/${imageId}`; // Format for thumbnail
+      if (typeof pictureUrl === 'string' && pictureUrl.trim() !== '') {
+        if (pictureUrl.includes('drive.google.com') && pictureUrl.includes('=')) {
+          const cleanImageUrl = pictureUrl.split('&export=download')[0]; // Remove export parameter
+          const imageId = cleanImageUrl.split('=')[1];
+          if (imageId) {
+            photoElement.src = `https://lh3.googleusercontent.com/d/${imageId}`; // Format for thumbnail
+          } else {
+            photoElement.src = pictureUrl;
+          }
+        } else {
+          photoElement.src = pictureUrl;
         }
       } else {
         photoElement.removeAttribute('src');

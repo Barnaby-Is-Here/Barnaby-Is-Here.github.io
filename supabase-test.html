@@ -112,11 +112,9 @@
     </main>
 
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+        import { getSupabaseClient } from './data/supabase-client.js';
 
-        const supabaseUrl = 'https://majgnbtdmraehpjqlazi.supabase.co';
-        const supabaseKey = 'sb_publishable_Bggu2s6XVfKQVbEbcufcaQ_4Q7XOfHz';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = getSupabaseClient();
 
         const insertButton = document.getElementById('insert-test');
         const readButton = document.getElementById('read-test');
