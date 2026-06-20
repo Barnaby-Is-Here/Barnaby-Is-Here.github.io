@@ -1,5 +1,9 @@
 import { getSupabaseClient } from './supabase-client.js';
 
+function isMissingSessionError(error) {
+  return Boolean(error?.message && error.message.includes('Auth session missing'));
+}
+
 function getCleanRedirectUrl() {
   const url = new URL(window.location.href);
   url.searchParams.delete('code');
@@ -44,8 +48,27 @@ export async function sendRecipeEditorMagicLink(emailAddress) {
 }
 
 export async function getRecipeEditorState() {
+  const { data: sessionData, error: sessionError } = await getSupabaseClient().auth.getSession();
+  if (sessionError) {
+    throw sessionError;
+  }
+
+  if (!sessionData.session) {
+    return {
+      user: null,
+      isEditor: false
+    };
+  }
+
   const { data, error } = await getSupabaseClient().auth.getUser();
   if (error) {
+    if (isMissingSessionError(error)) {
+      return {
+        user: null,
+        isEditor: false
+      };
+    }
+
     throw error;
   }
 
@@ -82,7 +105,7 @@ export function subscribeToRecipeAuthChanges(callback) {
 
 export async function signOutRecipeEditor() {
   const { error } = await getSupabaseClient().auth.signOut();
-  if (error) {
+  if (error && !isMissingSessionError(error)) {
     throw error;
   }
 }

@@ -37,6 +37,7 @@ class NavComponent extends HTMLElement {
   #navSendMagicLink = null;
   #navSignOutButton = null;
   #navDisplayName = null;
+  #navAuthActions = null;
   #unsubscribeAuth = null;
   #boundOutsideClickHandler = (event) => {
     if (!this.contains(event.target)) {
@@ -89,6 +90,7 @@ class NavComponent extends HTMLElement {
     this.#navSendMagicLink = this.querySelector('#nav-send-magic-link');
     this.#navSignOutButton = this.querySelector('#nav-sign-out-editor');
     this.#navDisplayName = this.querySelector('#user-display-name');
+    this.#navAuthActions = this.querySelector('.nav-auth-actions');
 
     if (!this.#userMenuToggle || !this.#userMenuPanel) {
       return;
@@ -184,11 +186,13 @@ class NavComponent extends HTMLElement {
     if (!recipeAuthState.user) {
       this.#navAuthSummary.textContent = 'Sign in with a magic link to add, edit, or remove recipes.';
       this.#navSignOutButton.style.display = 'none';
+      this.#navAuthActions?.classList.remove('is-signed-in');
       this.setActionEnabled(this.#newRecipeLink, false);
       return;
     }
 
     this.#navSignOutButton.style.display = 'inline-block';
+    this.#navAuthActions?.classList.add('is-signed-in');
 
     if (recipeAuthState.isEditor) {
       this.#navAuthSummary.textContent = `Signed in as ${recipeAuthState.user.email}. You can add, edit, and remove recipes.`;
@@ -340,6 +344,7 @@ class RecipeBoxComponent extends HTMLElement {
 
     const deleteBtn = this.querySelector('#recipe-delete-button');
     if (deleteBtn) {
+      deleteBtn.classList.toggle('is-disabled', !recipeAuthState.isEditor);
       deleteBtn.disabled = !recipeAuthState.isEditor;
       deleteBtn.onclick = recipeAuthState.isEditor
         ? async () => {

@@ -118,6 +118,10 @@ nav a:hover {
     align-items: center;
 }
 
+.nav-auth-actions.is-signed-in .nav-auth-entry {
+    display: none;
+}
+
 .nav-auth-actions input[type="email"] {
     flex: 1 1 220px;
     box-sizing: border-box;
@@ -313,6 +317,11 @@ nav a:hover {
     background-color: #dceeff;
 }
 
+.recipe-action-button.is-disabled:hover,
+.recipe-action-button:disabled:hover {
+    background-color: #f0f8ff;
+}
+
 .recipe-action-button svg {
     width: 22px;
     height: 22px;
@@ -326,6 +335,11 @@ nav a:hover {
 
 .recipe-delete-button:hover {
     background-color: #f8caca;
+}
+
+.recipe-delete-button.is-disabled:hover,
+.recipe-delete-button:disabled:hover {
+    background-color: #ffe5e5;
 }
 
 .recipe-delete-button:disabled {
