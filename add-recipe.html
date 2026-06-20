@@ -8,6 +8,7 @@
 
         <div class="new-recipe-area">
             <form id="new-recipe-form">
+                <input type="hidden" id="recipe-id" name="recipe-id">
                 <div class="form-group">
                     <label for="recipe-name">Recipe Name:</label>
                     <input type="text" id="recipe-name" name="recipe-name" required>
@@ -15,9 +16,10 @@
 
                 <div class="form-group">
                     <label for="recipe-path">Path:</label>
-                    <select id="recipe-path" name="recipe-path" required>
+                    <input type="text" id="recipe-path" name="recipe-path" list="recipe-path-options" placeholder="Italian" required>
+                    <datalist id="recipe-path-options">
                         <!-- Options filled dynamically. -->
-                    </select>
+                    </datalist>
                 </div>
 
                 <div class="form-group">
@@ -36,11 +38,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="recipe-photo">Upload Photo:</label>
-                    <input type="file" id="recipe-photo" name="recipe-photo" accept="image/*">
+                    <label for="recipe-photo-url">Picture URL:</label>
+                    <input type="text" id="recipe-photo-url" name="recipe-photo-url" placeholder="https://example.com/photo.jpg">
+                    <p class="helper-text">A public image URL works well for now, including the existing Google Drive links.</p>
                 </div>
 
-                <button type="submit">Add Recipe</button>
+                <p id="save-status" class="helper-text"></p>
+                <button type="submit" id="save-recipe-btn" disabled>Save Recipe</button>
             </form>
         </div>
 

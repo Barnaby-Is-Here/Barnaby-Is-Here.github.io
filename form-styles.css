@@ -8,6 +8,10 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+#new-recipe-form {
+    display: block;
+}
+
 .form-group {
     margin-bottom: 20px;
 }
@@ -19,6 +23,7 @@ label {
 }
 
 input[type="text"],
+    input[type="email"],
     select,
     textarea {
         resize: none;
@@ -47,6 +52,13 @@ button[type="submit"]:hover {
     background-color: #45a049;
 }
 
+.helper-text {
+    margin: 8px 0 0 0;
+    color: #555;
+    font-size: 0.95rem;
+}
+
 .new-recipe-area {
     padding-top: calc(var(--header-nav-height) + 10px);
+    padding-bottom: 20px;
 }

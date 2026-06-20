@@ -16,8 +16,15 @@ function recipesUpdatedCallback()
 
 // Function to update UI
 function updateUI(groupedRecipes, selectedGroup) {
+    const safeGroupedRecipes = groupedRecipes ?? {};
 
-    createNavBar(groupedRecipes);
+    if (Object.keys(safeGroupedRecipes).length === 0) {
+        createNavBar({});
+        displayRecipes(null, {});
+        return;
+    }
+
+    createNavBar(safeGroupedRecipes);
 
     // If not given, retrieve the last selected group from local storage
     if (!selectedGroup) {
@@ -25,20 +32,23 @@ function updateUI(groupedRecipes, selectedGroup) {
     }
 
     // If still no group, pick the first available.
-    if (!selectedGroup) {
-        selectedGroup = Object.keys(groupedRecipes)[0];
+    if (!selectedGroup || !safeGroupedRecipes[selectedGroup]) {
+        selectedGroup = Object.keys(safeGroupedRecipes)[0];
     }
 
     // If group is still empty, don't try to fill in.
     if (selectedGroup) {
-        displayRecipes(selectedGroup, groupedRecipes);
-        refreshRecipeNavHighlight(selectedGroup, groupedRecipes);
+        displayRecipes(selectedGroup, safeGroupedRecipes);
+        refreshRecipeNavHighlight(selectedGroup, safeGroupedRecipes);
     }
 }
 
 // Function to create a navigation bar based on grouped recipes
 function createNavBar(groupedRecipes) {
     const navList = document.getElementById('recipe-nav'); // Ensure you have a <ul> with this ID in your HTML
+    if (!navList) {
+        return;
+    }
     
     // Clear the existing list before adding new items
     navList.innerHTML = '';
@@ -54,6 +64,9 @@ function createNavBar(groupedRecipes) {
 // Update nav bar to make the selected one stay lit
 function refreshRecipeNavHighlight(groupName, groupedRecipes) {
     const navList = document.getElementById('recipe-nav'); // Ensure you have a <ul> with this ID in your HTML
+    if (!navList || !groupedRecipes[groupName]) {
+        return;
+    }
     const children = navList.children;
     
     // Make sure there are any children
@@ -86,9 +99,23 @@ function handleGroupClick(groupName) {
 // Display the selected recipes in the recipe-container
 function displayRecipes(groupName, groupedRecipes) {
     const recipeContainer = document.getElementById('recipe-container');
+    if (!recipeContainer) {
+        return;
+    }
+
     recipeContainer.innerHTML = ''; // Clear any previous recipes
 
+    if (!groupName) {
+        recipeContainer.textContent = 'Recipes are temporarily unavailable.';
+        return;
+    }
+
     const groupRecipes = groupedRecipes[groupName]; // Assuming `groupedRecipes` holds the grouped data
+
+    if (!Array.isArray(groupRecipes) || groupRecipes.length === 0) {
+        recipeContainer.textContent = 'Recipes are temporarily unavailable.';
+        return;
+    }
 
     groupRecipes.forEach(recipe => {
         const recipeBox = document.createElement('recipe-box');

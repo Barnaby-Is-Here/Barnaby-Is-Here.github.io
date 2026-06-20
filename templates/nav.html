@@ -1,7 +1,26 @@
 <header>
     <nav>
-        <a href="index.html">Recipes</a>
-        <a href="meal-plan.html">Meal Planner</a>
-        <a href="add-recipe.html">New Recipe</a>
+        <div class="nav-spacer" aria-hidden="true"></div>
+        <div class="nav-links">
+            <a href="index.html">Recipes</a>
+            <a href="meal-plan.html">Meal Planner</a>
+            <a href="add-recipe.html" id="new-recipe-link">New Recipe</a>
+        </div>
+        <div class="nav-user">
+            <button type="button" id="user-menu-toggle" class="user-menu-toggle" aria-expanded="false" aria-controls="user-menu-panel">
+                <span class="user-avatar" aria-hidden="true">U</span>
+                <span id="user-display-name">Guest</span>
+            </button>
+            <div id="user-menu-panel" class="user-menu-panel" hidden>
+                <h2>User</h2>
+                <p id="nav-auth-summary">Sign in with a magic link to add, edit, or remove recipes.</p>
+                <div class="nav-auth-actions">
+                    <input type="email" id="nav-editor-email" name="nav-editor-email" class="nav-auth-entry" placeholder="name@example.com">
+                    <button type="button" id="nav-send-magic-link" class="nav-auth-entry">Send Magic Link</button>
+                    <button type="button" id="nav-sign-out-editor" class="secondary-action">Sign Out</button>
+                </div>
+                <p id="nav-auth-status" class="helper-text"></p>
+            </div>
+        </div>
     </nav>
 </header>

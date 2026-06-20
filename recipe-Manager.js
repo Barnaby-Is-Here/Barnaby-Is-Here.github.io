@@ -1,11 +1,11 @@
+import { createRecipeDataSource } from './data/recipe-data-source.js';
+
 class RecipeManager {
 
     #subscribers = [];
-    #recipes = []; // Store all recipe data
-    #recipePhotoLinks = [];
-    #combinedRecipes = [];
-    #groupedRecipes = [];
-    #newGroupedRecipes = [];
+    #recipes = [];
+    #groupedRecipes = {};
+    #recipeDataSource = createRecipeDataSource();
 
     constructor() {
       if (!RecipeManager.instance) {
@@ -57,93 +57,61 @@ class RecipeManager {
     }
 
     async init() {
-        this.groupedRecipes = this.getCachedGroups();
-        await this.fetchDataInParallel();
-        if (this.#combinedRecipes) {
-            this.#newGroupedRecipes = this.groupRecipes(this.#combinedRecipes);
-    
-            // Step 6: Compare the new data to old
-            if (JSON.stringify(this.#newGroupedRecipes) !== JSON.stringify(this.groupedRecipes)) {
-                this.groupedRecipes = this.#newGroupedRecipes;
-                this.saveGroupsToCache();
-            }
+        this.groupedRecipes = this.getCachedGroups() ?? {};
+
+        const latestRecipes = await this.fetchRecipes();
+        if (latestRecipes === null) {
+            return;
+        }
+
+        const nextGroupedRecipes = this.groupRecipes(latestRecipes);
+        if (JSON.stringify(nextGroupedRecipes) !== JSON.stringify(this.groupedRecipes)) {
+            this.groupedRecipes = nextGroupedRecipes;
+            this.saveGroupsToCache();
         }
     }
 
-    // Handle google api.
-    // Function to fetch new recipes from the API
-    async fetchNewRecipes() {
+    async fetchRecipes() {
         try {
-            const response = await fetch('https://script.google.com/macros/s/AKfycbwaMrcK-9LiMs6AVmmHKVcV7vBfAP4b380wSQobMg7YGNYDGMlQ0c6197jzURGQAt4L6w/exec?route=recipes');
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const recipes = await response.json();
-            console.log('Fetched new recipes:', recipes);
-            return recipes;
+            this.#recipes = await this.#recipeDataSource.listRecipes();
+            console.log('Fetched recipes from provider:', this.#recipes);
+            return this.#recipes;
         } catch (error) {
-            console.error('Error fetching new recipes:', error);
-            return null; // Return null if there was an error
+            console.error('Error fetching recipes from provider:', error);
+            this.#recipes = [];
+            return null;
         }
     }
 
-    // Function to fetch new images from the API
-    async fetchNewImages() {
+    async refreshRecipes() {
+        const latestRecipes = await this.fetchRecipes();
+        if (latestRecipes === null) {
+            return false;
+        }
+
+        const nextGroupedRecipes = this.groupRecipes(latestRecipes);
+        this.groupedRecipes = nextGroupedRecipes;
+        this.saveGroupsToCache();
+        return true;
+    }
+
+    async deleteRecipeById(recipeId) {
         try {
-            const response = await fetch('https://script.google.com/macros/s/AKfycbwaMrcK-9LiMs6AVmmHKVcV7vBfAP4b380wSQobMg7YGNYDGMlQ0c6197jzURGQAt4L6w/exec?route=images');
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const images = await response.json();
-            console.log('Fetched new images:', images);
-
-            return images;
+            await this.#recipeDataSource.deleteRecipe(recipeId);
+            localStorage.removeItem('groupedRecipes');
+            return await this.refreshRecipes();
         } catch (error) {
-            console.error('Error fetching new images:', error);
-            return null; // Return null if there was an error
+            console.error('Error deleting recipe from provider:', error);
+            throw error;
         }
-    }
-
-    async fetchDataInParallel() {
-        try {
-            // Start both fetch requests without awaiting
-            const recipesPromise = this.fetchNewRecipes();
-            const imagesPromise = this.fetchNewImages();
-
-            // Wait for both promises to resolve
-            [this.#recipes, this.#recipePhotoLinks] = await Promise.all([recipesPromise, imagesPromise]);
-
-            // Combine
-            this.#combinedRecipes = this.combineRecipesWithImages(this.#recipes, this.#recipePhotoLinks)
-            console.log('Fetched Data:', this.#combinedRecipes);
-
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        }
-    }
-
-    // Function to combine recipes and images
-    combineRecipesWithImages(recipes, images) {
-        // Loop through the recipes and add the "Picture" property if an image is found
-        const combinedData = recipes.map(recipe => {
-            // Find the matching image (strip the file extension from image name)
-            const imageMatch = images.find(image => {
-                const imageName = image.name.replace(/\.[^/.]+$/, ""); // Remove file extension
-                return imageName === recipe.Name;
-            });
-
-            // Add the "Picture" property with the URL if a match is found
-            return {
-                ...recipe,
-                Picture: imageMatch ? imageMatch.url : null // Set to null if no match is found
-            };
-        });
-
-        return combinedData;
     }
 
     // Function to group recipes by their Path
     groupRecipes(recipes) {
+        if (!Array.isArray(recipes) || recipes.length === 0) {
+            return {};
+        }
+
         return recipes.reduce((acc, recipe) => {
             const path = recipe.Path;
 
