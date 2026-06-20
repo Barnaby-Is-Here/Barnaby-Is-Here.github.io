@@ -30,4 +30,42 @@ export class SupabaseRecipeDataSource {
       ? data.map(mapRecipeRowToAppRecipe)
       : [];
   }
+
+  async saveRecipe(recipe) {
+    const payload = {
+      name: recipe.name.trim(),
+      path: recipe.path.trim(),
+      ingredients: recipe.ingredients.trim(),
+      method: recipe.method.trim(),
+      tags: recipe.tags.trim(),
+      picture_url: recipe.pictureUrl ? recipe.pictureUrl.trim() : null
+    };
+
+    if (recipe.id) {
+      const { data, error } = await getSupabaseClient()
+        .from('recipes')
+        .update(payload)
+        .eq('id', recipe.id)
+        .select('id, name, path, ingredients, method, tags, picture_url, created_at, updated_at')
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to update recipe in Supabase: ${error.message}`);
+      }
+
+      return mapRecipeRowToAppRecipe(data);
+    }
+
+    const { data, error } = await getSupabaseClient()
+      .from('recipes')
+      .insert(payload)
+      .select('id, name, path, ingredients, method, tags, picture_url, created_at, updated_at')
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create recipe in Supabase: ${error.message}`);
+    }
+
+    return mapRecipeRowToAppRecipe(data);
+  }
 }
