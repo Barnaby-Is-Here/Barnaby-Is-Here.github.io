@@ -68,4 +68,15 @@ export class SupabaseRecipeDataSource {
 
     return mapRecipeRowToAppRecipe(data);
   }
+
+  async deleteRecipe(recipeId) {
+    const { error } = await getSupabaseClient()
+      .from('recipes')
+      .delete()
+      .eq('id', recipeId);
+
+    if (error) {
+      throw new Error(`Failed to delete recipe from Supabase: ${error.message}`);
+    }
+  }
 }

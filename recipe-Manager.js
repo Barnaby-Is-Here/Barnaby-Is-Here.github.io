@@ -83,6 +83,29 @@ class RecipeManager {
         }
     }
 
+    async refreshRecipes() {
+        const latestRecipes = await this.fetchRecipes();
+        if (latestRecipes === null) {
+            return false;
+        }
+
+        const nextGroupedRecipes = this.groupRecipes(latestRecipes);
+        this.groupedRecipes = nextGroupedRecipes;
+        this.saveGroupsToCache();
+        return true;
+    }
+
+    async deleteRecipeById(recipeId) {
+        try {
+            await this.#recipeDataSource.deleteRecipe(recipeId);
+            localStorage.removeItem('groupedRecipes');
+            return await this.refreshRecipes();
+        } catch (error) {
+            console.error('Error deleting recipe from provider:', error);
+            throw error;
+        }
+    }
+
     // Function to group recipes by their Path
     groupRecipes(recipes) {
         if (!Array.isArray(recipes) || recipes.length === 0) {

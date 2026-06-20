@@ -2,10 +2,7 @@
 import recipeManager from './recipe-Manager.js';
 import { createRecipeDataSource } from './data/recipe-data-source.js';
 import {
-  completeRecipeAuthRedirect,
   getRecipeEditorState,
-  sendRecipeEditorMagicLink,
-  signOutRecipeEditor,
   subscribeToRecipeAuthChanges
 } from './data/recipe-auth.js';
 
@@ -22,11 +19,6 @@ const tagsElement = document.getElementById('tags');
 const pictureUrlElement = document.getElementById('recipe-photo-url');
 const saveRecipeButton = document.getElementById('save-recipe-btn');
 const saveStatusElement = document.getElementById('save-status');
-const authSummaryElement = document.getElementById('auth-summary');
-const authStatusElement = document.getElementById('auth-status');
-const editorEmailElement = document.getElementById('editor-email');
-const sendMagicLinkButton = document.getElementById('send-magic-link');
-const signOutButton = document.getElementById('sign-out-editor');
 
 const urlParams = new URLSearchParams(window.location.search);
 const requestedRecipeName = urlParams.get('name');
@@ -37,20 +29,13 @@ let currentAuthState = {
   isEditor: false
 };
 let recipePrefilled = false;
+const signInPromptMessage = 'Sign in from the user menu in the top right to save recipe changes.';
+const notEditorMessage = 'This signed-in account is not on the recipe editor list.';
 
 // Main function to handle page load
 async function pageLoad() {
   recipeManager.subscribeToUpdates(handleRecipeManagerUpdate);
   populatePathOptions();
-
-  try {
-    const authRedirectCompleted = await completeRecipeAuthRedirect();
-    if (authRedirectCompleted) {
-      authStatusElement.textContent = 'Magic link sign-in completed.';
-    }
-  } catch (error) {
-    authStatusElement.textContent = `Sign-in failed: ${error.message}`;
-  }
 
   await refreshAuthState();
   handleRecipeManagerUpdate();
@@ -68,7 +53,7 @@ async function refreshAuthState() {
       user: null,
       isEditor: false
     };
-    authStatusElement.textContent = `Could not load editor status: ${error.message}`;
+    saveStatusElement.textContent = `Could not load editor status: ${error.message}`;
   }
 
   updateAuthUi();
@@ -76,20 +61,21 @@ async function refreshAuthState() {
 
 function updateAuthUi() {
   if (!currentAuthState.user) {
-    authSummaryElement.textContent = 'Sign in with a magic link to add or edit recipes.';
     saveRecipeButton.disabled = true;
-    signOutButton.style.display = 'none';
+    if (!saveStatusElement.textContent) {
+      saveStatusElement.textContent = signInPromptMessage;
+    }
     return;
   }
 
-  signOutButton.style.display = 'inline-block';
-
   if (currentAuthState.isEditor) {
-    authSummaryElement.textContent = `Signed in as ${currentAuthState.user.email}. You can save recipe changes.`;
     saveRecipeButton.disabled = false;
+    if (saveStatusElement.textContent === signInPromptMessage || saveStatusElement.textContent === notEditorMessage) {
+      saveStatusElement.textContent = '';
+    }
   } else {
-    authSummaryElement.textContent = `Signed in as ${currentAuthState.user.email}, but this account is not in the recipe editor list yet.`;
     saveRecipeButton.disabled = true;
+    saveStatusElement.textContent = notEditorMessage;
   }
 }
 
@@ -142,36 +128,6 @@ function normaliseTags(value) {
     .filter(tag => tag.length > 0)
     .join(', ');
 }
-
-sendMagicLinkButton.addEventListener('click', async function() {
-  const emailAddress = editorEmailElement.value.trim();
-  if (!emailAddress) {
-    authStatusElement.textContent = 'Enter an email address before requesting a magic link.';
-    return;
-  }
-
-  sendMagicLinkButton.disabled = true;
-  authStatusElement.textContent = 'Sending magic link...';
-
-  try {
-    await sendRecipeEditorMagicLink(emailAddress);
-    authStatusElement.textContent = `Magic link sent to ${emailAddress}. Open the email on this device to finish signing in.`;
-  } catch (error) {
-    authStatusElement.textContent = `Could not send magic link: ${error.message}`;
-  } finally {
-    sendMagicLinkButton.disabled = false;
-  }
-});
-
-signOutButton.addEventListener('click', async function() {
-  try {
-    await signOutRecipeEditor();
-    authStatusElement.textContent = 'Signed out.';
-    await refreshAuthState();
-  } catch (error) {
-    authStatusElement.textContent = `Could not sign out: ${error.message}`;
-  }
-});
 
 formElement.addEventListener('submit', async function(event) {
     event.preventDefault(); // Prevent form from submitting the traditional way

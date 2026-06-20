@@ -2,7 +2,48 @@ function getTemplateUrl(templatePath) {
   return new URL(templatePath, window.location.href).toString();
 }
 
+let recipeAuthState = {
+  user: null,
+  isEditor: false,
+  membership: null
+};
+
+function getUserDisplayName(authState = recipeAuthState) {
+  if (!authState?.user) {
+    return 'Guest';
+  }
+
+  if (authState.membership?.note) {
+    return authState.membership.note;
+  }
+
+  const emailAddress = authState.user.email ?? '';
+  return emailAddress.includes('@') ? emailAddress.split('@')[0] : emailAddress;
+}
+
+function dispatchRecipeAuthStateChanged() {
+  window.dispatchEvent(new CustomEvent('recipe-auth-state-changed', {
+    detail: recipeAuthState
+  }));
+}
+
 class NavComponent extends HTMLElement {
+  #userMenuPanel = null;
+  #userMenuToggle = null;
+  #newRecipeLink = null;
+  #navAuthSummary = null;
+  #navAuthStatus = null;
+  #navEditorEmail = null;
+  #navSendMagicLink = null;
+  #navSignOutButton = null;
+  #navDisplayName = null;
+  #unsubscribeAuth = null;
+  #boundOutsideClickHandler = (event) => {
+    if (!this.contains(event.target)) {
+      this.setUserMenuOpen(false);
+    }
+  };
+
   async connectedCallback() {
     try {
       const response = await fetch(getTemplateUrl('templates/nav.html'));
@@ -12,6 +53,7 @@ class NavComponent extends HTMLElement {
 
       this.innerHTML = await response.text();
       this.staticUI();
+      await this.setupAuthUi();
     } catch (error) {
       console.error('Unable to render navigation template:', error);
       this.innerHTML = '';
@@ -29,13 +71,173 @@ class NavComponent extends HTMLElement {
     const recipeWidth = (recipeNav !== null) ?  recipeNav.offsetWidth + 'px' : "30px";
     document.documentElement.style.setProperty('--recipe-nav-width', recipeWidth);
     }
+
+  disconnectedCallback() {
+    document.removeEventListener('click', this.#boundOutsideClickHandler);
+    if (this.#unsubscribeAuth?.data?.subscription) {
+      this.#unsubscribeAuth.data.subscription.unsubscribe();
+    }
+  }
+
+  async setupAuthUi() {
+    this.#userMenuPanel = this.querySelector('#user-menu-panel');
+    this.#userMenuToggle = this.querySelector('#user-menu-toggle');
+    this.#newRecipeLink = this.querySelector('#new-recipe-link');
+    this.#navAuthSummary = this.querySelector('#nav-auth-summary');
+    this.#navAuthStatus = this.querySelector('#nav-auth-status');
+    this.#navEditorEmail = this.querySelector('#nav-editor-email');
+    this.#navSendMagicLink = this.querySelector('#nav-send-magic-link');
+    this.#navSignOutButton = this.querySelector('#nav-sign-out-editor');
+    this.#navDisplayName = this.querySelector('#user-display-name');
+
+    if (!this.#userMenuToggle || !this.#userMenuPanel) {
+      return;
+    }
+
+    this.#userMenuToggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.setUserMenuOpen(this.#userMenuPanel.hidden);
+    });
+
+    this.#navSendMagicLink?.addEventListener('click', async () => {
+      const emailAddress = this.#navEditorEmail?.value.trim() ?? '';
+      if (!emailAddress) {
+        this.#navAuthStatus.textContent = 'Enter an email address before requesting a magic link.';
+        return;
+      }
+
+      this.#navSendMagicLink.disabled = true;
+      this.#navAuthStatus.textContent = 'Sending magic link...';
+
+      try {
+        const authModule = await import('./data/recipe-auth.js');
+        await authModule.sendRecipeEditorMagicLink(emailAddress);
+        this.#navAuthStatus.textContent = `Magic link sent to ${emailAddress}. Open the email on this device to finish signing in.`;
+      } catch (error) {
+        this.#navAuthStatus.textContent = `Could not send magic link: ${error.message}`;
+      } finally {
+        this.#navSendMagicLink.disabled = false;
+      }
+    });
+
+    this.#navSignOutButton?.addEventListener('click', async () => {
+      try {
+        const authModule = await import('./data/recipe-auth.js');
+        await authModule.signOutRecipeEditor();
+        this.#navAuthStatus.textContent = 'Signed out.';
+        await this.refreshAuthState();
+      } catch (error) {
+        this.#navAuthStatus.textContent = `Could not sign out: ${error.message}`;
+      }
+    });
+
+    document.addEventListener('click', this.#boundOutsideClickHandler);
+
+    try {
+      const authModule = await import('./data/recipe-auth.js');
+      const authRedirectCompleted = await authModule.completeRecipeAuthRedirect();
+      if (authRedirectCompleted) {
+        this.#navAuthStatus.textContent = 'Magic link sign-in completed.';
+      }
+
+      await this.refreshAuthState();
+
+      this.#unsubscribeAuth = authModule.subscribeToRecipeAuthChanges(async () => {
+        await this.refreshAuthState();
+      });
+    } catch (error) {
+      this.#navAuthStatus.textContent = `Could not load sign-in state: ${error.message}`;
+    }
+  }
+
+  async refreshAuthState() {
+    try {
+      const authModule = await import('./data/recipe-auth.js');
+      recipeAuthState = await authModule.getRecipeEditorState();
+      this.applyAuthUi();
+      dispatchRecipeAuthStateChanged();
+    } catch (error) {
+      recipeAuthState = {
+        user: null,
+        isEditor: false,
+        membership: null
+      };
+      this.applyAuthUi();
+      dispatchRecipeAuthStateChanged();
+      throw error;
+    }
+  }
+
+  applyAuthUi() {
+    const displayName = getUserDisplayName();
+    if (this.#navDisplayName) {
+      this.#navDisplayName.textContent = displayName;
+    }
+
+    if (this.#userMenuToggle) {
+      const avatar = this.#userMenuToggle.querySelector('.user-avatar');
+      if (avatar) {
+        avatar.textContent = displayName.charAt(0).toUpperCase();
+      }
+    }
+
+    if (!recipeAuthState.user) {
+      this.#navAuthSummary.textContent = 'Sign in with a magic link to add, edit, or remove recipes.';
+      this.#navSignOutButton.style.display = 'none';
+      this.setActionEnabled(this.#newRecipeLink, false);
+      return;
+    }
+
+    this.#navSignOutButton.style.display = 'inline-block';
+
+    if (recipeAuthState.isEditor) {
+      this.#navAuthSummary.textContent = `Signed in as ${recipeAuthState.user.email}. You can add, edit, and remove recipes.`;
+      this.setActionEnabled(this.#newRecipeLink, true);
+    } else {
+      this.#navAuthSummary.textContent = `Signed in as ${recipeAuthState.user.email}, but this account is not on the recipe editor list yet.`;
+      this.setActionEnabled(this.#newRecipeLink, false);
+    }
+  }
+
+  setActionEnabled(linkElement, isEnabled) {
+    if (!linkElement) {
+      return;
+    }
+
+    linkElement.classList.toggle('is-disabled', !isEnabled);
+    linkElement.setAttribute('aria-disabled', String(!isEnabled));
+
+    if (!isEnabled) {
+      linkElement.addEventListener('click', preventDisabledNavClick);
+    } else {
+      linkElement.removeEventListener('click', preventDisabledNavClick);
+    }
+  }
+
+  setUserMenuOpen(isOpen) {
+    if (!this.#userMenuPanel || !this.#userMenuToggle) {
+      return;
+    }
+
+    this.#userMenuPanel.hidden = !isOpen;
+    this.#userMenuToggle.setAttribute('aria-expanded', String(isOpen));
+  }
 }
 customElements.define('custom-nav', NavComponent);
+
+function preventDisabledNavClick(event) {
+  event.preventDefault();
+}
 
 class RecipeBoxComponent extends HTMLElement {
   constructor() {
       super();
       this.recipeData = null; // Initialize recipe data
+      this.boundAuthStateHandler = () => {
+        if (this.recipeData) {
+          this.fillInRecipeBox(this.recipeData);
+        }
+      };
   }
 
   async connectedCallback() {
@@ -49,10 +251,15 @@ class RecipeBoxComponent extends HTMLElement {
           if (this.recipeData) {
               this.fillInRecipeBox(this.recipeData); // Fill in data if it was set before
           }
+          window.addEventListener('recipe-auth-state-changed', this.boundAuthStateHandler);
       } catch (error) {
           console.error('Unable to render recipe template:', error);
           this.innerHTML = '';
       }
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener('recipe-auth-state-changed', this.boundAuthStateHandler);
   }
 
   setRecipeData(recipe) {
@@ -124,6 +331,35 @@ class RecipeBoxComponent extends HTMLElement {
     const editBtn = this.querySelector('#recipe-change-link');
     if (editBtn) {
       editBtn.href = 'add-recipe.html?path=' + encodeURIComponent(recipe.Path ?? '') + '&name=' + encodeURIComponent(recipe.Name ?? '');
+      editBtn.classList.toggle('is-disabled', !recipeAuthState.isEditor);
+      editBtn.setAttribute('aria-disabled', String(!recipeAuthState.isEditor));
+      editBtn.onclick = recipeAuthState.isEditor ? null : function(event) {
+        event.preventDefault();
+      };
+    }
+
+    const deleteBtn = this.querySelector('#recipe-delete-button');
+    if (deleteBtn) {
+      deleteBtn.disabled = !recipeAuthState.isEditor;
+      deleteBtn.onclick = recipeAuthState.isEditor
+        ? async () => {
+            const confirmed = window.confirm(`Delete ${recipe.Name}? This cannot be undone.`);
+            if (!confirmed) {
+              return;
+            }
+
+            deleteBtn.disabled = true;
+
+            try {
+              const recipeManagerModule = await import('./recipe-Manager.js');
+              await recipeManagerModule.default.deleteRecipeById(recipe.Id);
+            } catch (error) {
+              console.error('Could not delete recipe:', error);
+              window.alert(`Could not delete recipe: ${error.message}`);
+              deleteBtn.disabled = false;
+            }
+          }
+        : null;
     }
 
     // Update the recipe photo

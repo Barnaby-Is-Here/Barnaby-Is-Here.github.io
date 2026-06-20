@@ -1,5 +1,4 @@
-#new-recipe-form,
-.auth-panel {
+#new-recipe-form {
     max-width: 600px;
     margin: 0 auto;
     padding: 20px;
@@ -7,25 +6,6 @@
     border: 1px solid #ddd;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-#new-recipe-form {
-    margin-top: 16px;
-}
-
-.auth-panel h2 {
-    margin-top: 0;
-}
-
-.auth-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-}
-
-.auth-actions input[type="email"] {
-    flex: 1 1 240px;
 }
 
 #new-recipe-form {
@@ -70,27 +50,6 @@ button[type="submit"] {
 
 button[type="submit"]:hover {
     background-color: #45a049;
-}
-
-.auth-actions button,
-.secondary-action {
-    color: white;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.auth-actions button {
-    background-color: #6a67ce;
-}
-
-.secondary-action {
-    background-color: #757575;
-}
-
-#sign-out-editor {
-    display: none;
 }
 
 .helper-text {

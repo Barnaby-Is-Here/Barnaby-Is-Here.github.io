@@ -32,7 +32,7 @@ function updateUI(groupedRecipes, selectedGroup) {
     }
 
     // If still no group, pick the first available.
-    if (!selectedGroup) {
+    if (!selectedGroup || !safeGroupedRecipes[selectedGroup]) {
         selectedGroup = Object.keys(safeGroupedRecipes)[0];
     }
 
