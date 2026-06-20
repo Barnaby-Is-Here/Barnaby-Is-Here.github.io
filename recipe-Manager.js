@@ -57,9 +57,9 @@ class RecipeManager {
     }
 
     async init() {
-        this.groupedRecipes = this.getCachedGroups();
+        this.groupedRecipes = this.getCachedGroups() ?? {};
         await this.fetchDataInParallel();
-        if (this.#combinedRecipes) {
+        if (Array.isArray(this.#combinedRecipes) && this.#combinedRecipes.length > 0) {
             this.#newGroupedRecipes = this.groupRecipes(this.#combinedRecipes);
     
             // Step 6: Compare the new data to old
@@ -80,10 +80,10 @@ class RecipeManager {
             }
             const recipes = await response.json();
             console.log('Fetched new recipes:', recipes);
-            return recipes;
+            return Array.isArray(recipes) ? recipes : [];
         } catch (error) {
             console.error('Error fetching new recipes:', error);
-            return null; // Return null if there was an error
+            return []; // Return an empty list if there was an error
         }
     }
 
@@ -97,10 +97,10 @@ class RecipeManager {
             const images = await response.json();
             console.log('Fetched new images:', images);
 
-            return images;
+            return Array.isArray(images) ? images : [];
         } catch (error) {
             console.error('Error fetching new images:', error);
-            return null; // Return null if there was an error
+            return []; // Return an empty list if there was an error
         }
     }
 
@@ -114,20 +114,24 @@ class RecipeManager {
             [this.#recipes, this.#recipePhotoLinks] = await Promise.all([recipesPromise, imagesPromise]);
 
             // Combine
-            this.#combinedRecipes = this.combineRecipesWithImages(this.#recipes, this.#recipePhotoLinks)
+            this.#combinedRecipes = this.combineRecipesWithImages(this.#recipes, this.#recipePhotoLinks);
             console.log('Fetched Data:', this.#combinedRecipes);
 
         } catch (error) {
             console.error('Error fetching data:', error);
+            this.#combinedRecipes = [];
         }
     }
 
     // Function to combine recipes and images
     combineRecipesWithImages(recipes, images) {
+        const safeRecipes = Array.isArray(recipes) ? recipes : [];
+        const safeImages = Array.isArray(images) ? images : [];
+
         // Loop through the recipes and add the "Picture" property if an image is found
-        const combinedData = recipes.map(recipe => {
+        const combinedData = safeRecipes.map(recipe => {
             // Find the matching image (strip the file extension from image name)
-            const imageMatch = images.find(image => {
+            const imageMatch = safeImages.find(image => {
                 const imageName = image.name.replace(/\.[^/.]+$/, ""); // Remove file extension
                 return imageName === recipe.Name;
             });
@@ -144,6 +148,10 @@ class RecipeManager {
 
     // Function to group recipes by their Path
     groupRecipes(recipes) {
+        if (!Array.isArray(recipes) || recipes.length === 0) {
+            return {};
+        }
+
         return recipes.reduce((acc, recipe) => {
             const path = recipe.Path;
 

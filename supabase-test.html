@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Test</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Georgia, "Times New Roman", serif;
+            background: #f6f1e8;
+            color: #1f1a17;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(191, 146, 82, 0.15), transparent 35%),
+                linear-gradient(180deg, #f8f4ec 0%, #efe5d4 100%);
+        }
+
+        main {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 48px 20px 64px;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            letter-spacing: 0.02em;
+        }
+
+        p {
+            line-height: 1.5;
+        }
+
+        .panel {
+            margin-top: 24px;
+            padding: 20px;
+            border: 1px solid rgba(77, 58, 40, 0.18);
+            border-radius: 16px;
+            background: rgba(255, 252, 246, 0.88);
+            box-shadow: 0 18px 40px rgba(89, 62, 28, 0.08);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 18px;
+            font: inherit;
+            background: #7a4d21;
+            color: #fff8ef;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            background: #d9c4a6;
+            color: #2e2218;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.95rem;
+            line-height: 1.45;
+        }
+
+        .status {
+            min-height: 24px;
+            margin-top: 14px;
+            font-weight: 600;
+            color: #5f3d1d;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Supabase Read/Write Test</h1>
+        <p>This page talks directly to your Supabase project from the browser, the same way your GitHub Pages recipe app will.</p>
+
+        <section class="panel">
+            <p><strong>Project:</strong> <code>majgnbtdmraehpjqlazi</code></p>
+            <p><strong>Table:</strong> <code>public.recipe_test</code></p>
+
+            <div class="controls">
+                <button id="insert-test">Insert test row</button>
+                <button id="read-test">Read latest rows</button>
+                <button id="clear-log" class="secondary">Clear output</button>
+            </div>
+
+            <div id="status" class="status"></div>
+        </section>
+
+        <section class="panel">
+            <pre id="output">Waiting for a test run...</pre>
+        </section>
+    </main>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const supabaseUrl = 'https://majgnbtdmraehpjqlazi.supabase.co';
+        const supabaseKey = 'sb_publishable_Bggu2s6XVfKQVbEbcufcaQ_4Q7XOfHz';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        const insertButton = document.getElementById('insert-test');
+        const readButton = document.getElementById('read-test');
+        const clearButton = document.getElementById('clear-log');
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+
+        function setBusy(isBusy, message = '') {
+            insertButton.disabled = isBusy;
+            readButton.disabled = isBusy;
+            status.textContent = message;
+        }
+
+        function showResult(label, payload) {
+            output.textContent = `${label}\n\n${JSON.stringify(payload, null, 2)}`;
+        }
+
+        insertButton.addEventListener('click', async () => {
+            setBusy(true, 'Writing a test row to Supabase...');
+
+            const payload = {
+                name: `Browser test ${new Date().toISOString()}`,
+                note: 'Inserted from supabase-test.html'
+            };
+
+            const { data, error } = await supabase
+                .from('recipe_test')
+                .insert(payload)
+                .select();
+
+            setBusy(false, error ? 'Insert failed.' : 'Insert completed.');
+            showResult('Insert result', { payload, data, error });
+        });
+
+        readButton.addEventListener('click', async () => {
+            setBusy(true, 'Reading the latest rows from Supabase...');
+
+            const { data, error } = await supabase
+                .from('recipe_test')
+                .select('*')
+                .order('id', { ascending: false })
+                .limit(10);
+
+            setBusy(false, error ? 'Read failed.' : 'Read completed.');
+            showResult('Read result', { data, error });
+        });
+
+        clearButton.addEventListener('click', () => {
+            status.textContent = '';
+            output.textContent = 'Waiting for a test run...';
+        });
+    </script>
+</body>
+</html>

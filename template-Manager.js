@@ -1,12 +1,21 @@
-class NavComponent extends HTMLElement {
-  connectedCallback() {
-    fetch('/templates/nav.html')
-      .then(response => response.text())
-      .then(data => {
-        this.innerHTML = data;
-        this.staticUI();
+function getTemplateUrl(templatePath) {
+  return new URL(templatePath, window.location.href).toString();
+}
 
-    });
+class NavComponent extends HTMLElement {
+  async connectedCallback() {
+    try {
+      const response = await fetch(getTemplateUrl('templates/nav.html'));
+      if (!response.ok) {
+        throw new Error(`Failed to load nav template: ${response.status}`);
+      }
+
+      this.innerHTML = await response.text();
+      this.staticUI();
+    } catch (error) {
+      console.error('Unable to render navigation template:', error);
+      this.innerHTML = '';
+    }
   }
 
   // Update static UI elements
@@ -29,15 +38,21 @@ class RecipeBoxComponent extends HTMLElement {
       this.recipeData = null; // Initialize recipe data
   }
 
-  connectedCallback() {
-      fetch('/templates/recipe-box.html')
-          .then(response => response.text())
-          .then(data => {
-              this.innerHTML = data;
-              if (this.recipeData) {
-                  this.fillInRecipeBox(this.recipeData); // Fill in data if it was set before
-              }
-          });
+  async connectedCallback() {
+      try {
+          const response = await fetch(getTemplateUrl('templates/recipe-box.html'));
+          if (!response.ok) {
+              throw new Error(`Failed to load recipe box template: ${response.status}`);
+          }
+
+          this.innerHTML = await response.text();
+          if (this.recipeData) {
+              this.fillInRecipeBox(this.recipeData); // Fill in data if it was set before
+          }
+      } catch (error) {
+          console.error('Unable to render recipe template:', error);
+          this.innerHTML = '';
+      }
   }
 
   setRecipeData(recipe) {
@@ -48,15 +63,28 @@ class RecipeBoxComponent extends HTMLElement {
   }
 
   fillInRecipeBox(recipe) {
+    if (!recipe) {
+      return;
+    }
 
     // Update the recipe name
     const nameElement = this.querySelector('#recipe-name');
-    nameElement.textContent = recipe.Name;
+    if (nameElement) {
+      nameElement.textContent = recipe.Name ?? '';
+    }
 
     // Update the ingredients list
     const ingredientList = this.querySelector('#ingredient-list');
+    if (!ingredientList) {
+      return;
+    }
+
     ingredientList.innerHTML = '';
-    recipe.Ingredients.split(',').forEach(ingredient => {
+    const ingredients = typeof recipe.Ingredients === 'string'
+      ? recipe.Ingredients.split(',')
+      : [];
+
+    ingredients.forEach(ingredient => {
         const li = document.createElement('li');
         li.textContent = ingredient.trim();
         ingredientList.appendChild(li);
@@ -73,27 +101,48 @@ class RecipeBoxComponent extends HTMLElement {
 
     // Update the method text
     const methodElement = this.querySelector('#method');
-    methodElement.textContent = recipe.Method;
+    if (methodElement) {
+      methodElement.textContent = recipe.Method ?? '';
+    }
 
     // Update the tags area
     const tagArea = this.querySelector('#tag-area');
-    tagArea.innerHTML = '<strong>Tags:</strong>';
-    recipe.Tags.split(',').forEach(tag => {
-        const span = document.createElement('span');
-        span.textContent = tag.trim();
-        tagArea.appendChild(span);
-    });
+    if (tagArea) {
+      tagArea.innerHTML = '<strong>Tags:</strong>';
+      const tags = typeof recipe.Tags === 'string'
+        ? recipe.Tags.split(',')
+        : [];
+
+      tags.forEach(tag => {
+          const span = document.createElement('span');
+          span.textContent = tag.trim();
+          tagArea.appendChild(span);
+      });
+    }
 
     // Set config link
     const editBtn = this.querySelector('#recipe-change-link');
-    editBtn.href = "add-recipe.html?path=" + recipe.Path +"&name=" + recipe.Name;
+    if (editBtn) {
+      editBtn.href = 'add-recipe.html?path=' + encodeURIComponent(recipe.Path ?? '') + '&name=' + encodeURIComponent(recipe.Name ?? '');
+    }
 
     // Update the recipe photo
     const photoElement = this.querySelector('#recipe-photo');
-    const cleanImageUrl = recipe.Picture.split('&export=download')[0]; // Remove export parameter
-    const directImageUrl = `https://lh3.googleusercontent.com/d/${cleanImageUrl.split('=')[1]}`; // Format for thumbnail
-    photoElement.src = directImageUrl;
-    photoElement.alt = recipe.Name;
+    if (photoElement) {
+      const pictureUrl = recipe.Picture;
+
+      if (typeof pictureUrl === 'string' && pictureUrl.includes('=')) {
+        const cleanImageUrl = pictureUrl.split('&export=download')[0]; // Remove export parameter
+        const imageId = cleanImageUrl.split('=')[1];
+        if (imageId) {
+          photoElement.src = `https://lh3.googleusercontent.com/d/${imageId}`; // Format for thumbnail
+        }
+      } else {
+        photoElement.removeAttribute('src');
+      }
+
+      photoElement.alt = recipe.Name ?? 'Recipe Photo';
+    }
   }
 }
 customElements.define('recipe-box', RecipeBoxComponent);
