@@ -3,6 +3,7 @@ import { getSupabaseClient } from '../supabase-client.js';
 function mapRecipeRowToAppRecipe(row) {
   return {
     Id: row.id,
+    AuthorId: row.author_id ?? null,
     Name: row.name,
     Path: row.path,
     Ingredients: row.ingredients,
@@ -18,7 +19,7 @@ export class SupabaseRecipeDataSource {
   async listRecipes() {
     const { data, error } = await getSupabaseClient()
       .from('recipes')
-      .select('id, name, path, ingredients, method, tags, picture_url, created_at, updated_at')
+      .select('id, author_id, name, path, ingredients, method, tags, picture_url, created_at, updated_at')
       .order('path', { ascending: true })
       .order('name', { ascending: true });
 
@@ -46,7 +47,7 @@ export class SupabaseRecipeDataSource {
         .from('recipes')
         .update(payload)
         .eq('id', recipe.id)
-        .select('id, name, path, ingredients, method, tags, picture_url, created_at, updated_at')
+        .select('id, author_id, name, path, ingredients, method, tags, picture_url, created_at, updated_at')
         .single();
 
       if (error) {
@@ -59,7 +60,7 @@ export class SupabaseRecipeDataSource {
     const { data, error } = await getSupabaseClient()
       .from('recipes')
       .insert(payload)
-      .select('id, name, path, ingredients, method, tags, picture_url, created_at, updated_at')
+      .select('id, author_id, name, path, ingredients, method, tags, picture_url, created_at, updated_at')
       .single();
 
     if (error) {
