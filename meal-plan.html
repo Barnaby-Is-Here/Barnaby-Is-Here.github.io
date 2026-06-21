@@ -1,8 +1,51 @@
 <!DOCTYPE html>
-<html>
-    <link rel="stylesheet" href="styles.css">
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Meal Planner</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
     <body>
         <script src="template-Manager.js"></script>
-        <custom-nav></custom-nav>   
+        <custom-nav></custom-nav>
+
+        <main class="meal-plan-page">
+            <section class="meal-plan-shell">
+                <div class="meal-plan-header">
+                    <div>
+                        <p class="meal-plan-eyebrow">Meal Planner</p>
+                        <h1>Upcoming meals</h1>
+                        <p class="meal-plan-intro">A simple week-ahead view for now. We can make the range adjustable later.</p>
+                    </div>
+                </div>
+
+                <p id="meal-plan-auth-note" class="meal-plan-note" hidden>Sign in from the menu in the top right to view your household meal plan.</p>
+                <p id="meal-plan-status" class="meal-plan-note" aria-live="polite"></p>
+
+                <div class="meal-plan-table-wrap">
+                    <table class="meal-plan-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">Recipe</th>
+                                <th scope="col">State</th>
+                            </tr>
+                        </thead>
+                        <tbody id="meal-plan-rows">
+                            <tr>
+                                <td colspan="3" class="meal-plan-empty">Loading meal plan...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="meal-plan-actions">
+                    <button id="meal-plan-add-random" type="button" class="meal-plan-add-button">Add Random Meal For Tomorrow</button>
+                </div>
+            </section>
+        </main>
+
+        <script type="module" src="meal-plan.js"></script>
     </body>
 </html>
