@@ -233,6 +233,53 @@ function preventDisabledNavClick(event) {
   event.preventDefault();
 }
 
+function buildRecipeShareUrl(recipe) {
+  const shareUrl = new URL('index.html', window.location.href);
+  shareUrl.searchParams.set('group', recipe.Path ?? '');
+  shareUrl.searchParams.set('recipe', recipe.Name ?? '');
+  shareUrl.hash = '';
+  return shareUrl.toString();
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const helperField = document.createElement('textarea');
+  helperField.value = text;
+  helperField.setAttribute('readonly', '');
+  helperField.style.position = 'absolute';
+  helperField.style.left = '-9999px';
+  document.body.appendChild(helperField);
+  helperField.select();
+
+  try {
+    const copySucceeded = document.execCommand('copy');
+    if (!copySucceeded) {
+      throw new Error('Clipboard access is not available in this browser.');
+    }
+  } finally {
+    document.body.removeChild(helperField);
+  }
+}
+
+function showCopiedState(buttonElement) {
+  if (!buttonElement) {
+    return;
+  }
+
+  window.clearTimeout(buttonElement.copyStateTimeoutId);
+  buttonElement.classList.add('is-copied');
+  buttonElement.querySelector('span').textContent = 'Copied';
+
+  buttonElement.copyStateTimeoutId = window.setTimeout(() => {
+    buttonElement.classList.remove('is-copied');
+    buttonElement.querySelector('span').textContent = 'Share';
+  }, 1800);
+}
+
 class RecipeBoxComponent extends HTMLElement {
   constructor() {
       super();
@@ -282,6 +329,19 @@ class RecipeBoxComponent extends HTMLElement {
     const nameElement = this.querySelector('#recipe-name');
     if (nameElement) {
       nameElement.textContent = recipe.Name ?? '';
+    }
+
+    const shareButton = this.querySelector('#recipe-share-button');
+    if (shareButton) {
+      shareButton.onclick = async () => {
+        try {
+          await copyTextToClipboard(buildRecipeShareUrl(recipe));
+          showCopiedState(shareButton);
+        } catch (error) {
+          console.error('Could not copy recipe share link:', error);
+          window.alert(`Could not copy recipe link: ${error.message}`);
+        }
+      };
     }
 
     // Update the ingredients list
@@ -390,6 +450,8 @@ class RecipeBoxComponent extends HTMLElement {
 
       photoElement.alt = recipe.Name ?? 'Recipe Photo';
     }
+
+    this.dispatchEvent(new CustomEvent('recipe-box-ready', { bubbles: true }));
   }
 }
 customElements.define('recipe-box', RecipeBoxComponent);

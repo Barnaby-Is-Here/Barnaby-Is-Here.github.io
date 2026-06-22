@@ -250,6 +250,49 @@ nav a:hover {
     color: #333;
 }
 
+.recipe-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.recipe-share-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #c7d9ec;
+    border-radius: 999px;
+    background-color: #f0f8ff;
+    color: #2c5577;
+    padding: 6px 12px;
+    cursor: pointer;
+    font: inherit;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.recipe-share-button:hover {
+    background-color: #dceeff;
+    border-color: #b6d0ea;
+}
+
+.recipe-share-button svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.recipe-share-button.is-copied {
+    background-color: #dff4df;
+    border-color: #9ed09e;
+    color: #276027;
+}
+
+.recipe-title-row .recipe-name {
+    margin: 0;
+}
+
 .recipe-ingredients,
 .recipe-method,
 .recipe-tags {
@@ -548,6 +591,10 @@ nav a:hover {
     .recipe-photo {
         width: 250px; /* Shrink the image */
         height: 250px;
+    }
+
+    .recipe-title-row {
+        align-items: flex-start;
     }
 
     .meal-plan-page {
