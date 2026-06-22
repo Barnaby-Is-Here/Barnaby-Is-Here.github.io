@@ -1,7 +1,15 @@
 <div class="recipe-box">
     <div class="recipe-header">
         <div class="recipe-preamble">
-            <h3 id="recipe-name" class="recipe-name">Recipe Name</h3>
+            <div class="recipe-title-row">
+                <h3 id="recipe-name" class="recipe-name">Recipe Name</h3>
+                <button type="button" id="recipe-share-button" class="recipe-share-button" aria-label="Share recipe">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18 16a3 3 0 0 0-2.39 1.19l-6.83-3.42a3.11 3.11 0 0 0 0-1.54l6.83-3.42A3 3 0 1 0 15 7a3.11 3.11 0 0 0 .08.68L8.25 11.1a3 3 0 1 0 0 1.8l6.83 3.42A3 3 0 1 0 18 16z"></path>
+                    </svg>
+                    <span>Share</span>
+                </button>
+            </div>
             <div class="recipe-ingredients">
                 <strong>Ingredients:</strong>
                 <ul id="ingredient-list">

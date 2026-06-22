@@ -1,6 +1,9 @@
 // Import recipe manager
 import recipeManager from './recipe-Manager.js';
 
+const sharedRecipeRequest = readSharedRecipeRequest();
+let sharedRecipeWasRevealed = false;
+
 // Main function to handle page load
 async function pageLoad() {
     if (recipeManager.groupedRecipes) {
@@ -14,6 +17,21 @@ function recipesUpdatedCallback()
     updateUI(recipeManager.groupedRecipes);
 }
 
+function readSharedRecipeRequest() {
+    const searchParams = new URLSearchParams(window.location.search);
+    const groupName = searchParams.get('group');
+    const recipeName = searchParams.get('recipe');
+
+    if (!groupName || !recipeName) {
+        return null;
+    }
+
+    return {
+        groupName,
+        recipeName
+    };
+}
+
 // Function to update UI
 function updateUI(groupedRecipes, selectedGroup) {
     const safeGroupedRecipes = groupedRecipes ?? {};
@@ -25,6 +43,10 @@ function updateUI(groupedRecipes, selectedGroup) {
     }
 
     createNavBar(safeGroupedRecipes);
+
+    if (!selectedGroup && sharedRecipeRequest?.groupName && safeGroupedRecipes[sharedRecipeRequest.groupName]) {
+        selectedGroup = sharedRecipeRequest.groupName;
+    }
 
     // If not given, retrieve the last selected group from local storage
     if (!selectedGroup) {
@@ -40,6 +62,7 @@ function updateUI(groupedRecipes, selectedGroup) {
     if (selectedGroup) {
         displayRecipes(selectedGroup, safeGroupedRecipes);
         refreshRecipeNavHighlight(selectedGroup, safeGroupedRecipes);
+        revealSharedRecipe(selectedGroup);
     }
 }
 
@@ -119,10 +142,74 @@ function displayRecipes(groupName, groupedRecipes) {
 
     groupRecipes.forEach(recipe => {
         const recipeBox = document.createElement('recipe-box');
+        recipeBox.dataset.recipeName = recipe.Name ?? '';
+        recipeBox.dataset.groupName = recipe.Path ?? '';
+        recipeBox.tabIndex = -1;
         recipeBox.setRecipeData(recipe); // Set the recipe data immediately
         recipeContainer.appendChild(recipeBox);
     });
 }
+
+function revealSharedRecipe(selectedGroup) {
+    if (sharedRecipeWasRevealed || !sharedRecipeRequest || sharedRecipeRequest.groupName !== selectedGroup) {
+        return;
+    }
+
+    const recipeElement = findRecipeElement(sharedRecipeRequest.groupName, sharedRecipeRequest.recipeName);
+    if (!recipeElement || recipeElement.childElementCount === 0) {
+        return;
+    }
+
+    revealRecipeElement(recipeElement);
+}
+
+function findRecipeElement(groupName, recipeName) {
+    const recipeBoxes = document.querySelectorAll('recipe-box');
+    for (const recipeBox of recipeBoxes) {
+        if (recipeBox.dataset.groupName === groupName && recipeBox.dataset.recipeName === recipeName) {
+            return recipeBox;
+        }
+    }
+
+    return null;
+}
+
+function scrollRecipeToTop(recipeElement) {
+    const contentPanel = document.querySelector('.content');
+    if (!contentPanel || !recipeElement) {
+        return;
+    }
+
+    const contentRect = contentPanel.getBoundingClientRect();
+    const recipeRect = recipeElement.getBoundingClientRect();
+    const nextScrollTop = contentPanel.scrollTop + (recipeRect.top - contentRect.top) - 12;
+
+    contentPanel.scrollTo({
+        top: Math.max(0, nextScrollTop),
+        behavior: 'smooth'
+    });
+
+    recipeElement.focus({ preventScroll: true });
+}
+
+function revealRecipeElement(recipeElement) {
+    scrollRecipeToTop(recipeElement);
+    sharedRecipeWasRevealed = true;
+}
+
+document.addEventListener('recipe-box-ready', (event) => {
+    const recipeElement = event.target.closest('recipe-box');
+    if (!recipeElement || !sharedRecipeRequest || sharedRecipeWasRevealed) {
+        return;
+    }
+
+    if (
+        recipeElement.dataset.groupName === sharedRecipeRequest.groupName &&
+        recipeElement.dataset.recipeName === sharedRecipeRequest.recipeName
+    ) {
+        revealRecipeElement(recipeElement);
+    }
+});
 
 // Call the load function when the page loads
 window.onload = pageLoad;
